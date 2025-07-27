@@ -1,0 +1,67 @@
+name: "FaceMask_Train"
+include {
+  phase: TRAIN
+}
+input: "data"
+input_dim: 1
+input_dim: 3
+input_dim: 300
+input_dim: 300
+
+# Data layer with augmentation
+layer {
+  name: "data"
+  type: "AnnotatedData"
+  top: "data"
+  top: "label"
+  include { phase: TRAIN }
+  transform_param {
+    mirror: true
+    mean_value: 104
+    mean_value: 117
+    mean_value: 123
+    resize_param {
+      prob: 1.0
+      resize_mode: WARP
+      height: 300
+      width: 300
+    }
+    distort_param {
+      brightness_prob: 0.5
+      contrast_prob: 0.5
+      saturation_prob: 0.5
+    }
+  }
+  data_param {
+    source: "train_lmdb"
+    batch_size: 32
+    backend: LMDB
+  }
+}
+
+# [Insert all network layers from deploy.prototxt here]
+
+# MultiBoxLoss layers
+layer {
+  name: "mbox_loss"
+  type: "MultiBoxLoss"
+  bottom: "mbox_loc"
+  bottom: "mbox_conf"
+  bottom: "mbox_priorbox"
+  bottom: "label"
+  top: "mbox_loss"
+  loss_weight: 1
+  multibox_loss_param {
+    loc_loss_type: SMOOTH_L1
+    conf_loss_type: SOFTMAX
+    num_classes: 2
+    share_location: true
+    match_type: PER_PREDICTION
+    overlap_threshold: 0.5
+    use_prior_for_matching: true
+    background_label_id: 0
+    neg_pos_ratio: 3
+    neg_overlap: 0.5
+    code_type: CENTER_SIZE
+  }
+}

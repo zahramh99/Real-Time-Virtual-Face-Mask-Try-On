@@ -1,0 +1,25 @@
+# Core Packages
+tensorflow>=2.6.0  # Updated to TF 2.x with Keras built-in
+opencv-python>=4.5.5.64  # Updated OpenCV with face detection modules
+numpy>=1.21.2  # Updated NumPy for better performance
+
+# Web Framework
+Flask>=2.0.1  # Updated Flask version
+gunicorn>=20.1.0  # Production server
+
+# Image Processing
+Pillow>=9.0.1  # Updated Pillow (maintained fork of PIL)
+imutils>=0.5.4  # Updated image utilities
+
+# Additional Utilities
+scipy>=1.7.3  # Updated scientific computing
+matplotlib>=3.5.1  # Updated plotting (for visualization if needed)
+protobuf>=3.20.0  # Required for TensorFlow model serialization
+
+# Development Tools (optional)
+python-dotenv>=0.19.2  # For environment variables
+requests>=2.27.1  # For API calls if needed
+
+# Face Detection Specific
+dlib>=19.24.0  # Alternative face detection (optional)
+face-recognition>=1.3.0  # If using face recognition features

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Face Mask Try-On</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    video, canvas {
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: #000;
+    }
+    .controls {
+      margin-top: 20px;
+    }
+    select, button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎭 Virtual Face Mask Try-On</h1>
+    <div>
+      <video id="video" width="640" height="480" autoplay muted playsinline></video>
+      <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+    <div class="controls">
+      <select id="maskSelector">
+        <option value="surgical">Surgical Mask</option>
+        <option value="n95">N95 Mask</option>
+        <option value="custom">Custom Design</option>
+      </select>
+      <button id="snapshotBtn">Take Snapshot</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const maskSelector = document.getElementById('maskSelector');
+      const snapshotBtn = document.getElementById('snapshotBtn');
+      
+      let isProcessing = false;
+      let maskType = 'surgical';
+
+      // Initialize camera
+      async function initCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 640, height: 480, facingMode: 'user' } 
+          });
+          video.srcObject = stream;
+          await new Promise(resolve => video.onloadedmetadata = resolve);
+          processVideo();
+        } catch (err) {
+          console.error("Camera error:", err);
+          alert("Could not access camera. Please enable permissions.");
+        }
+      }
+
+      // Main processing loop
+      async function processVideo() {
+        if (isProcessing) return;
+        
+        isProcessing = true;
+        try {
+          // Draw current video frame
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Send for processing (replace with your actual endpoint)
+          const imageData = canvas.toDataURL('image/jpeg', 0.8);
+          const response = await fetch("http://localhost:5000/detect_mask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              image: imageData,
+              mask_type: maskType 
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            drawResults(data.results);
+          }
+        } catch (err) {
+          console.error("Processing error:", err);
+        } finally {
+          isProcessing = false;
+          requestAnimationFrame(processVideo);
+        }
+      }
+
+      // Draw detection results
+      function drawResults(faces) {
+        faces.forEach(face => {
+          const [x1, y1, x2, y2] = face.box;
+          
+          // Draw face bounding box
+          ctx.strokeStyle = face.label === "Mask" ? "#2ecc71" : "#e74c3c";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          
+          // Draw label
+          ctx.fillStyle = face.label === "Mask" ? "#2ecc71" : "#e74c3c";
+          ctx.font = '16px Arial';
+          ctx.fillText(
+            `${face.label} ${(face.probability * 100).toFixed(1)}%`, 
+            x1, 
+            y1 > 20 ? y1 - 10 : y2 + 20
+          );
+        });
+      }
+
+      // Event listeners
+      maskSelector.addEventListener('change', (e) => {
+        maskType = e.target.value;
+      });
+
+      snapshotBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `mask-selfie-${new Date().toISOString()}.jpg`;
+        link.href = canvas.toDataURL('image/jpeg');
+        link.click();
+      });
+
+      // Initialize
+      await initCamera();
+    });
+  </script>
+</body>
+</html>
